@@ -15,29 +15,20 @@ setupTabUpdates(Config);
 setupBackgroundRequestProxy();
 
 waitFor(() => Config.isReady()).then(() => {
-    if (!Config.config!.activated && (Config.config!.alreadyActivated || Config.config!.licenseKey)) {
-        Config.config!.activated = true;
-    }
-    if (Config.config!.activated && Config.config!.userID) {
-        Config.config!.alreadyActivated = true;
-    }
-
-    if (Config.config!.userID) {
-        registerNeededContentScripts().then(() => {
-            if (!isFirefoxOrSafari()) {
-                // Chrome doesn't trigger onInstall when this happens, but they need to be
-                // re-registered to apply to incognito tabs
-                chrome.extension.isAllowedIncognitoAccess((isAllowedAccess) => {
-                    if (isAllowedAccess && !Config.config!.lastIncognitoStatus) {
-                        registerNeededContentScripts(undefined, true).catch(logError);
-                    }
-        
-                    Config.config!.lastIncognitoStatus = isAllowedAccess;
-                });
-            }
-        }).catch(logError);
-    }
-
+    registerNeededContentScripts().then(() => {
+        if (!isFirefoxOrSafari()) {
+            // Chrome doesn't trigger onInstall when this happens, but they need to be
+            // re-registered to apply to incognito tabs
+            chrome.extension.isAllowedIncognitoAccess((isAllowedAccess) => {
+                if (isAllowedAccess && !Config.config!.lastIncognitoStatus) {
+                    registerNeededContentScripts(undefined, true).catch(logError);
+                }
+    
+                Config.config!.lastIncognitoStatus = isAllowedAccess;
+            });
+        }
+    }).catch(logError);
+    
     setupAlarms();
 
     // Check every time since sometimes initial onInstall isn't called
@@ -48,7 +39,7 @@ waitFor(() => Config.isReady()).then(() => {
             // If there is no userID, then it is the first install.
             if (!userID){
                 const groupPolicyLicenseKey = await getGroupPolicyLicenseKey();
-                const paywallEnabled = !CompileConfig["freeAccess"]
+                const paywallEnabled = false
                     && !navigator.userAgent.includes("Mobile;")
                     && !navigator.userAgent.includes("iPhone;")
                     && !navigator.userAgent.includes("iPad;")
@@ -103,12 +94,6 @@ waitFor(() => Config.isReady()).then(() => {
                 }
     
                 Config.config!.showInfoAboutRandomThumbnails = true;
-    
-                if (paywallEnabled) {
-                    setTimeout(() => void chrome.tabs.create({url: chrome.runtime.getURL("/payment.html")}), 100);
-                } else if (!groupPolicyLicenseKey) {
-                    setTimeout(() => void chrome.tabs.create({url: chrome.runtime.getURL("/help.html")}), 100);
-                }
             }
         };
     
